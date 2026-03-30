@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import os
 from openai import OpenAI
 
-# Load env variables
+# Load environment variables
 load_dotenv()
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -18,7 +18,7 @@ def generate():
     data = request.json
     user_input = data.get("text", "")
 
-    # Simple model selection (still reliable)
+    # Model selection (simple + reliable)
     if "helmet" in user_input.lower() or "hard hat" in user_input.lower():
         model_url = "https://modelviewer.dev/shared-assets/models/Astronaut.glb"
     elif "car" in user_input.lower():
@@ -28,7 +28,7 @@ def generate():
     else:
         model_url = "https://modelviewer.dev/shared-assets/models/Astronaut.glb"
 
-    # 🔥 REAL AI EXPLANATION
+    # AI explanation
     response = client.chat.completions.create(
         model="gpt-4.1-mini",
         messages=[
@@ -50,7 +50,6 @@ def generate():
 def animate():
     text = request.json.get("text", "")
 
-    # 🔥 REAL AI INTENT DETECTION
     response = client.chat.completions.create(
         model="gpt-4.1-mini",
         messages=[
