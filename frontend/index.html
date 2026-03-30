@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Engineering Challenge</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1>AI 3D Object Generator</h1>
+
+<input id="inputText" placeholder="Enter object (helmet, car, robot)" />
+<button onclick="generate()">Generate</button>
+
+<p id="explanation"></p>
+
+<canvas id="canvas"></canvas>
+
+<hr>
+
+<h2>Avatar Control</h2>
+
+<input id="avatarCommand" placeholder="Enter command (walk, wave, point)" />
+<button onclick="controlAvatar()">Run</button>
+
+<p id="avatarExplanation"></p>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/loaders/GLTFLoader.js"></script>
+
+<script src="script.js"></script>
+
+</body>
+</html>
