@@ -1,5 +1,13 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from dotenv import load_dotenv
+import os
+from openai import OpenAI
+
+# Load env variables
+load_dotenv()
+
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 app = Flask(__name__)
 CORS(app)
@@ -8,21 +16,28 @@ CORS(app)
 @app.route("/generate", methods=["POST"])
 def generate():
     data = request.json
-    user_input = data.get("text", "").lower()
+    user_input = data.get("text", "")
 
-    # Predefined models (no API needed)
-    if "helmet" in user_input or "hard hat" in user_input:
+    # Simple model selection (still reliable)
+    if "helmet" in user_input.lower() or "hard hat" in user_input.lower():
         model_url = "https://modelviewer.dev/shared-assets/models/Astronaut.glb"
-        explanation = "A hard hat is used in construction to protect the head from falling objects."
-    elif "car" in user_input:
+    elif "car" in user_input.lower():
         model_url = "https://modelviewer.dev/shared-assets/models/Car.glb"
-        explanation = "Cars are used for transportation of people and goods."
-    elif "robot" in user_input:
+    elif "robot" in user_input.lower():
         model_url = "https://modelviewer.dev/shared-assets/models/RobotExpressive.glb"
-        explanation = "Robots are programmable machines used to perform tasks automatically."
     else:
         model_url = "https://modelviewer.dev/shared-assets/models/Astronaut.glb"
-        explanation = f"{user_input.capitalize()} is commonly used in real-world applications."
+
+    # 🔥 REAL AI EXPLANATION
+    response = client.chat.completions.create(
+        model="gpt-4.1-mini",
+        messages=[
+            {"role": "system", "content": "You are an educational assistant."},
+            {"role": "user", "content": f"Explain what a {user_input} is used for in 2 simple sentences."}
+        ]
+    )
+
+    explanation = response.choices[0].message.content
 
     return jsonify({
         "model_url": model_url,
@@ -33,18 +48,24 @@ def generate():
 # ---------- SYSTEM 2: AVATAR ----------
 @app.route("/animate", methods=["POST"])
 def animate():
-    text = request.json.get("text", "").lower()
+    text = request.json.get("text", "")
 
-    if "walk" in text:
-        action = "walk"
-    elif "wave" in text:
-        action = "wave"
-    elif "point" in text:
-        action = "point"
-    elif "hello" in text:
-        action = "wave"
-    else:
-        action = "idle"
+    # 🔥 REAL AI INTENT DETECTION
+    response = client.chat.completions.create(
+        model="gpt-4.1-mini",
+        messages=[
+            {
+                "role": "system",
+                "content": "Classify the user's command into one word: walk, wave, point, idle."
+            },
+            {
+                "role": "user",
+                "content": text
+            }
+        ]
+    )
+
+    action = response.choices[0].message.content.strip().lower()
 
     explanation = f"The avatar performs: {action}"
 
