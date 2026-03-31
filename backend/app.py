@@ -2,15 +2,19 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 import os
+import requests
 from openai import OpenAI
 
 # Load environment variables
 load_dotenv()
 
+# Initialize OpenAI client
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+# Initialize Flask app
 app = Flask(__name__)
 CORS(app)
+
 
 # ---------- SYSTEM 1: AI → 3D PIPELINE ----------
 @app.route("/generate", methods=["POST"])
@@ -18,7 +22,30 @@ def generate():
     data = request.json
     user_input = data.get("text", "")
 
-    # Model selection (simple + reliable)
+    sketchfab_key = os.getenv("SKETCHFAB_API_KEY")
+
+    # 🔍 Search Sketchfab
+    search_url = "https://api.sketchfab.com/v3/search"
+    params = {
+        "q": user_input,
+        "type": "models",
+        "downloadable": "true",
+        "staffpicked": "true"
+    }
+
+    headers = {
+        "Authorization": f"Token {sketchfab_key}"
+    }
+
+    try:
+        res = requests.get(search_url, headers=headers, params=params)
+        results = res.json()
+
+        sketchfab_name = results["results"][0]["name"]
+    except:
+        sketchfab_name = "No result found"
+
+    # 🎯 GLB fallback mapping (for Three.js compatibility)
     if "helmet" in user_input.lower() or "hard hat" in user_input.lower():
         model_url = "https://modelviewer.dev/shared-assets/models/Astronaut.glb"
     elif "car" in user_input.lower():
@@ -28,8 +55,8 @@ def generate():
     else:
         model_url = "https://modelviewer.dev/shared-assets/models/Astronaut.glb"
 
-    # AI explanation
-    response = client.chat.completions.create(
+    # 🤖 AI Explanation
+    ai_response = client.chat.completions.create(
         model="gpt-4.1-mini",
         messages=[
             {"role": "system", "content": "You are an educational assistant."},
@@ -37,11 +64,12 @@ def generate():
         ]
     )
 
-    explanation = response.choices[0].message.content
+    explanation = ai_response.choices[0].message.content
 
     return jsonify({
         "model_url": model_url,
-        "explanation": explanation
+        "explanation": explanation,
+        "sketchfab_result": sketchfab_name
     })
 
 
@@ -50,7 +78,7 @@ def generate():
 def animate():
     text = request.json.get("text", "")
 
-    response = client.chat.completions.create(
+    ai_response = client.chat.completions.create(
         model="gpt-4.1-mini",
         messages=[
             {
@@ -64,7 +92,7 @@ def animate():
         ]
     )
 
-    action = response.choices[0].message.content.strip().lower()
+    action = ai_response.choices[0].message.content.strip().lower()
 
     explanation = f"The avatar performs: {action}"
 
@@ -74,5 +102,6 @@ def animate():
     })
 
 
+# ---------- RUN SERVER ----------
 if __name__ == "__main__":
     app.run(debug=True)
