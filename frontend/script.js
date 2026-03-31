@@ -2,8 +2,10 @@ let scene, camera, renderer, currentModel;
 
 init();
 
+// ---------- INITIALIZE 3D ----------
 function init() {
     scene = new THREE.Scene();
+
     camera = new THREE.PerspectiveCamera(75, 600/400, 0.1, 1000);
 
     renderer = new THREE.WebGLRenderer({
@@ -32,7 +34,7 @@ function animate() {
 }
 
 
-// -------- SYSTEM 1 --------
+// ---------- SYSTEM 1: GENERATE ----------
 async function generate() {
     const text = document.getElementById("inputText").value;
 
@@ -51,6 +53,8 @@ async function generate() {
     loadModel(data.model_url);
 }
 
+
+// ---------- LOAD 3D MODEL ----------
 function loadModel(url) {
     const loader = new THREE.GLTFLoader();
 
@@ -65,7 +69,7 @@ function loadModel(url) {
 }
 
 
-// -------- SYSTEM 2 --------
+// ---------- SYSTEM 2: AVATAR ----------
 async function controlAvatar() {
     const text = document.getElementById("avatarCommand").value;
 
@@ -84,6 +88,8 @@ async function controlAvatar() {
     playAnimation(data.action);
 }
 
+
+// ---------- ANIMATION ----------
 function playAnimation(action) {
     alert("Avatar action: " + action);
 }
