@@ -6,19 +6,24 @@ init();
 function init() {
     scene = new THREE.Scene();
 
-    camera = new THREE.PerspectiveCamera(75, 600/400, 0.1, 1000);
+    camera = new THREE.PerspectiveCamera(75, 600 / 400, 0.1, 1000);
 
     renderer = new THREE.WebGLRenderer({
-        canvas: document.getElementById("canvas")
+        canvas: document.getElementById("canvas"),
+        antialias: true
     });
 
     renderer.setSize(600, 400);
 
     camera.position.z = 5;
 
+    // Lighting
     const light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(1,1,1).normalize();
+    light.position.set(1, 1, 1).normalize();
     scene.add(light);
+
+    const ambient = new THREE.AmbientLight(0x404040);
+    scene.add(ambient);
 
     animate();
 }
@@ -38,19 +43,30 @@ function animate() {
 async function generate() {
     const text = document.getElementById("inputText").value;
 
-    const response = await fetch("http://127.0.0.1:5000/generate", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ text })
-    });
+    if (!text) {
+        alert("Please enter an object.");
+        return;
+    }
 
-    const data = await response.json();
+    try {
+        const response = await fetch("http://127.0.0.1:5000/generate", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ text })
+        });
 
-    document.getElementById("explanation").innerText = data.explanation;
+        const data = await response.json();
 
-    loadModel(data.model_url);
+        document.getElementById("explanation").innerText = data.explanation;
+
+        loadModel(data.model_url);
+
+    } catch (error) {
+        console.error(error);
+        alert("Error connecting to backend.");
+    }
 }
 
 
@@ -62,10 +78,21 @@ function loadModel(url) {
         scene.remove(currentModel);
     }
 
-    loader.load(url, function (gltf) {
-        currentModel = gltf.scene;
-        scene.add(currentModel);
-    });
+    loader.load(
+        url,
+        function (gltf) {
+            currentModel = gltf.scene;
+
+            // Center model
+            currentModel.position.set(0, 0, 0);
+
+            scene.add(currentModel);
+        },
+        undefined,
+        function (error) {
+            console.error("Error loading model:", error);
+        }
+    );
 }
 
 
@@ -73,23 +100,40 @@ function loadModel(url) {
 async function controlAvatar() {
     const text = document.getElementById("avatarCommand").value;
 
-    const response = await fetch("http://127.0.0.1:5000/animate", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ text })
-    });
+    if (!text) {
+        alert("Enter a command.");
+        return;
+    }
 
-    const data = await response.json();
+    try {
+        const response = await fetch("http://127.0.0.1:5000/animate", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ text })
+        });
 
-    document.getElementById("avatarExplanation").innerText = data.explanation;
+        const data = await response.json();
 
-    playAnimation(data.action);
+        document.getElementById("avatarExplanation").innerText = data.explanation;
+
+        playAnimation(data.action);
+
+    } catch (error) {
+        console.error(error);
+        alert("Error connecting to backend.");
+    }
 }
 
 
 // ---------- ANIMATION ----------
 function playAnimation(action) {
-    alert("Avatar action: " + action);
+    console.log("Avatar action:", action);
+
+    // Simulated animation feedback
+    alert("Avatar performs: " + action);
+
+    // Future upgrade:
+    // 👉 Here you can connect real GLTF animations
 }
