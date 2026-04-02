@@ -19,7 +19,7 @@ function init() {
 
     // Lighting
     const light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(1, 1, 1).normalize();
+    light.position.set(1, 1, 1);
     scene.add(light);
 
     const ambient = new THREE.AmbientLight(0x404040);
@@ -28,6 +28,7 @@ function init() {
     animate();
 }
 
+// ---------- ANIMATION LOOP ----------
 function animate() {
     requestAnimationFrame(animate);
 
@@ -59,13 +60,18 @@ async function generate() {
 
         const data = await response.json();
 
+        if (data.error) {
+            alert("Error: " + data.error);
+            return;
+        }
+
         document.getElementById("explanation").innerText = data.explanation;
 
         loadModel(data.model_url);
 
     } catch (error) {
         console.error(error);
-        alert("Error connecting to backend.");
+        alert("Failed to connect to backend.");
     }
 }
 
@@ -85,12 +91,14 @@ function loadModel(url) {
 
             // Center model
             currentModel.position.set(0, 0, 0);
+            currentModel.scale.set(1, 1, 1);
 
             scene.add(currentModel);
         },
         undefined,
         function (error) {
-            console.error("Error loading model:", error);
+            console.error("Model load error:", error);
+            alert("Failed to load 3D model.");
         }
     );
 }
@@ -116,24 +124,32 @@ async function controlAvatar() {
 
         const data = await response.json();
 
+        if (data.error) {
+            alert("Error: " + data.error);
+            return;
+        }
+
         document.getElementById("avatarExplanation").innerText = data.explanation;
 
         playAnimation(data.action);
 
     } catch (error) {
         console.error(error);
-        alert("Error connecting to backend.");
+        alert("Failed to connect to backend.");
     }
 }
 
 
-// ---------- ANIMATION ----------
+// ---------- AVATAR ANIMATION (SIMULATION) ----------
 function playAnimation(action) {
     console.log("Avatar action:", action);
 
-    // Simulated animation feedback
-    alert("Avatar performs: " + action);
+    const message = {
+        walk: "🚶 Avatar is walking",
+        wave: "👋 Avatar is waving",
+        point: "👉 Avatar is pointing",
+        idle: "🧍 Avatar is idle"
+    };
 
-    // Future upgrade:
-    // 👉 Here you can connect real GLTF animations
+    alert(message[action] || "Unknown action");
 }
