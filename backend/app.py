@@ -1,107 +1,110 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from dotenv import load_dotenv
-import os
 import requests
-from openai import OpenAI
+import os
 
-# Load environment variables
-load_dotenv()
-
-# Initialize OpenAI client
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-# Initialize Flask app
 app = Flask(__name__)
 CORS(app)
 
+# 🔐 USE ENV VARIABLE (DO NOT HARDCODE KEY IN GITHUB)
+HF_API_KEY = os.getenv("HF_API_KEY")
 
-# ---------- SYSTEM 1: AI → 3D PIPELINE ----------
+API_URL = "https://api-inference.huggingface.co/models/google/flan-t5-base"
+
+headers = {
+    "Authorization": f"Bearer {HF_API_KEY}",
+    "Content-Type": "application/json"
+}
+
+
+# ---------- HELPER FUNCTION ----------
+def query_huggingface(payload):
+    try:
+        response = requests.post(API_URL, headers=headers, json=payload, timeout=30)
+        return response.json()
+    except Exception as e:
+        return {"error": str(e)}
+
+
+# ---------- TEST 1: AI → 3D PIPELINE ----------
 @app.route("/generate", methods=["POST"])
 def generate():
-    data = request.json
-    user_input = data.get("text", "")
-
-    sketchfab_key = os.getenv("SKETCHFAB_API_KEY")
-
-    # 🔍 Search Sketchfab
-    search_url = "https://api.sketchfab.com/v3/search"
-    params = {
-        "q": user_input,
-        "type": "models",
-        "downloadable": "true",
-        "staffpicked": "true"
-    }
-
-    headers = {
-        "Authorization": f"Token {sketchfab_key}"
-    }
-
     try:
-        res = requests.get(search_url, headers=headers, params=params)
-        results = res.json()
+        data = request.get_json()
+        text = data.get("text", "").strip()
 
-        sketchfab_name = results["results"][0]["name"]
-    except:
-        sketchfab_name = "No result found"
+        if not text:
+            return jsonify({"error": "No input text provided"}), 400
 
-    # 🎯 GLB fallback mapping (for Three.js compatibility)
-    if "helmet" in user_input.lower() or "hard hat" in user_input.lower():
-        model_url = "https://modelviewer.dev/shared-assets/models/Astronaut.glb"
-    elif "car" in user_input.lower():
-        model_url = "https://modelviewer.dev/shared-assets/models/Car.glb"
-    elif "robot" in user_input.lower():
-        model_url = "https://modelviewer.dev/shared-assets/models/RobotExpressive.glb"
-    else:
+        # Placeholder 3D model (can upgrade later)
         model_url = "https://modelviewer.dev/shared-assets/models/Astronaut.glb"
 
-    # 🤖 AI Explanation
-    ai_response = client.chat.completions.create(
-        model="gpt-4.1-mini",
-        messages=[
-            {"role": "system", "content": "You are an educational assistant."},
-            {"role": "user", "content": f"Explain what a {user_input} is used for in 2 simple sentences."}
-        ]
-    )
+        payload = {
+            "inputs": f"Question: What is a {text} used for? Answer in 2 simple sentences."
+        }
 
-    explanation = ai_response.choices[0].message.content
+        result = query_huggingface(payload)
 
-    return jsonify({
-        "model_url": model_url,
-        "explanation": explanation,
-        "sketchfab_result": sketchfab_name
-    })
+        if isinstance(result, list) and "generated_text" in result[0]:
+            explanation = result[0]["generated_text"]
+        else:
+            explanation = f"A {text} is commonly used for practical purposes."
+
+        return jsonify({
+            "model_url": model_url,
+            "explanation": explanation
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
-# ---------- SYSTEM 2: AVATAR ----------
+# ---------- TEST 2: AVATAR ----------
 @app.route("/animate", methods=["POST"])
 def animate():
-    text = request.json.get("text", "")
+    try:
+        data = request.get_json()
+        text = data.get("text", "").strip()
 
-    ai_response = client.chat.completions.create(
-        model="gpt-4.1-mini",
-        messages=[
-            {
-                "role": "system",
-                "content": "Classify the user's command into one word: walk, wave, point, idle."
-            },
-            {
-                "role": "user",
-                "content": text
-            }
-        ]
-    )
+        if not text:
+            return jsonify({"error": "No command provided"}), 400
 
-    action = ai_response.choices[0].message.content.strip().lower()
+        payload = {
+            "inputs": f"Instruction: Choose one word (walk, wave, point, idle). Input: {text}. Output:"
+        }
 
-    explanation = f"The avatar performs: {action}"
+        result = query_huggingface(payload)
 
-    return jsonify({
-        "action": action,
-        "explanation": explanation
-    })
+        if isinstance(result, list) and "generated_text" in result[0]:
+            action_raw = result[0]["generated_text"].lower()
+
+            # Clean mapping
+            if "walk" in action_raw:
+                action = "walk"
+            elif "wave" in action_raw:
+                action = "wave"
+            elif "point" in action_raw:
+                action = "point"
+            else:
+                action = "idle"
+        else:
+            action = "idle"
+
+        return jsonify({
+            "action": action,
+            "explanation": f"The avatar performs: {action}"
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ---------- HEALTH CHECK ----------
+@app.route("/")
+def home():
+    return jsonify({"status": "API running"})
 
 
 # ---------- RUN SERVER ----------
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000)
