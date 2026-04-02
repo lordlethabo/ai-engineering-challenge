@@ -1,44 +1,38 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
+import streamlit as st
 import requests
 import os
+from dotenv import load_dotenv
 
-app = Flask(__name__)
-CORS(app)
+load_dotenv()
 
-# 🔐 USE ENV VARIABLE (DO NOT HARDCODE KEY IN GITHUB)
+# 🔑 Hugging Face API Key
 HF_API_KEY = os.getenv("HF_API_KEY")
 
 API_URL = "https://api-inference.huggingface.co/models/google/flan-t5-base"
 
 headers = {
-    "Authorization": f"Bearer {HF_API_KEY}",
-    "Content-Type": "application/json"
+    "Authorization": f"Bearer {HF_API_KEY}"
 }
-
 
 # ---------- HELPER FUNCTION ----------
 def query_huggingface(payload):
-    try:
-        response = requests.post(API_URL, headers=headers, json=payload, timeout=30)
-        return response.json()
-    except Exception as e:
-        return {"error": str(e)}
+    response = requests.post(API_URL, headers=headers, json=payload)
+    return response.json()
 
+# ---------- PAGE CONFIG ----------
+st.set_page_config(page_title="AI 3D Learning System", layout="centered")
 
-# ---------- TEST 1: AI → 3D PIPELINE ----------
-@app.route("/generate", methods=["POST"])
-def generate():
-    try:
-        data = request.get_json()
-        text = data.get("text", "").strip()
+st.title("🤖 AI 3D Learning System")
 
-        if not text:
-            return jsonify({"error": "No input text provided"}), 400
+# =========================
+# TEST 1 — AI → 3D
+# =========================
+st.header("🔹 AI → 3D Object Generator")
 
-        # Placeholder 3D model (can upgrade later)
-        model_url = "https://modelviewer.dev/shared-assets/models/Astronaut.glb"
+text = st.text_input("Enter an object (helmet, car, robot)")
 
+if st.button("Generate 3D + Explanation"):
+    if text:
         payload = {
             "inputs": f"Question: What is a {text} used for? Answer in 2 simple sentences."
         }
@@ -48,29 +42,36 @@ def generate():
         if isinstance(result, list) and "generated_text" in result[0]:
             explanation = result[0]["generated_text"]
         else:
-            explanation = f"A {text} is commonly used for practical purposes."
+            explanation = f"A {text} is commonly used in everyday life."
 
-        return jsonify({
-            "model_url": model_url,
-            "explanation": explanation
-        })
+        st.success("Generated successfully!")
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        st.write("### 📘 Explanation")
+        st.write(explanation)
 
+        # 3D model (iframe)
+        model_url = "https://modelviewer.dev/shared-assets/models/Astronaut.glb"
 
-# ---------- TEST 2: AVATAR ----------
-@app.route("/animate", methods=["POST"])
-def animate():
-    try:
-        data = request.get_json()
-        text = data.get("text", "").strip()
+        st.write("### 🧊 3D Model Viewer")
+        st.components.v1.html(f"""
+        <model-viewer src="{model_url}" auto-rotate camera-controls style="width:100%; height:400px;"></model-viewer>
+        <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+        """, height=420)
 
-        if not text:
-            return jsonify({"error": "No command provided"}), 400
+    else:
+        st.warning("Please enter an object.")
 
+# =========================
+# TEST 2 — AVATAR
+# =========================
+st.header("🔹 AI Avatar Control")
+
+command = st.text_input("Enter command (walk, wave, point)")
+
+if st.button("Run Avatar Command"):
+    if command:
         payload = {
-            "inputs": f"Instruction: Choose one word (walk, wave, point, idle). Input: {text}. Output:"
+            "inputs": f"Instruction: Choose one word (walk, wave, point, idle). Input: {command}. Output:"
         }
 
         result = query_huggingface(payload)
@@ -78,7 +79,6 @@ def animate():
         if isinstance(result, list) and "generated_text" in result[0]:
             action_raw = result[0]["generated_text"].lower()
 
-            # Clean mapping
             if "walk" in action_raw:
                 action = "walk"
             elif "wave" in action_raw:
@@ -90,21 +90,8 @@ def animate():
         else:
             action = "idle"
 
-        return jsonify({
-            "action": action,
-            "explanation": f"The avatar performs: {action}"
-        })
+        st.success(f"Avatar action: {action}")
+        st.write(f"🧠 The avatar performs: {action}")
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-# ---------- HEALTH CHECK ----------
-@app.route("/")
-def home():
-    return jsonify({"status": "API running"})
-
-
-# ---------- RUN SERVER ----------
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    else:
+        st.warning("Enter a command.")
