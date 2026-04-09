@@ -1,34 +1,66 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>AI Engineering Challenge</title>
+    <meta charset="UTF-8">
+    <title>AI 3D Learning System</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<h1>AI 3D Object Generator</h1>
+<div class="app">
 
-<input id="inputText" placeholder="Enter object (helmet, car, robot)" />
-<button onclick="generate()">Generate</button>
+    <h1>🧠 AI 3D Learning System</h1>
 
-<p id="explanation"></p>
+    <!-- ---------- 3D GENERATOR ---------- -->
+    <div class="card">
 
-<canvas id="canvas"></canvas>
+        <h2>3D Generator</h2>
 
-<hr>
+        <div class="controls">
+            <input id="inputText" placeholder="e.g. construction helmet, robot arm" />
+            <button onclick="generate()">Generate</button>
+        </div>
 
-<h2>Avatar Control</h2>
+        <p id="status"></p>
 
-<input id="avatarCommand" placeholder="Enter command (walk, wave, point)" />
-<button onclick="controlAvatar()">Run</button>
+        <canvas id="canvas"></canvas>
 
-<p id="avatarExplanation"></p>
+        <div class="output">
+            <h3>Explanation</h3>
+            <p id="explanation"></p>
+        </div>
 
-<!-- Three.js -->
+    </div>
+
+    <!-- ---------- AVATAR ---------- -->
+    <div class="card">
+
+        <h2>AI Avatar</h2>
+
+        <div class="controls">
+            <input id="avatarCommand" placeholder="e.g. walk, wave, point" />
+            <button onclick="controlAvatar()">Run</button>
+        </div>
+
+        <p id="avatarStatus"></p>
+
+        <div class="output">
+            <h3>Avatar Explanation</h3>
+            <p id="avatarExplanation"></p>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- THREE -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-<!-- GLTF Loader -->
+<!-- LOADER -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/loaders/GLTFLoader.js"></script>
+
+<!-- CONTROLS (IMPORTANT 🔥) -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/controls/OrbitControls.js"></script>
 
 <script src="script.js"></script>
 
