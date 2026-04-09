@@ -1,67 +1,72 @@
-let scene, camera, renderer, currentModel;
+let scene, camera, renderer, controls, currentModel;
 
 init();
 
-// ---------- INITIALIZE 3D ----------
+// ---------- INIT ----------
 function init() {
     scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x111111);
 
-    camera = new THREE.PerspectiveCamera(75, 600 / 400, 0.1, 1000);
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / 500, 0.1, 1000);
 
     renderer = new THREE.WebGLRenderer({
         canvas: document.getElementById("canvas"),
         antialias: true
     });
 
-    renderer.setSize(600, 400);
+    renderer.setSize(window.innerWidth * 0.8, 400);
 
-    camera.position.z = 5;
+    camera.position.set(0, 1, 5);
+
+    // 🔥 Orbit Controls (INTERACTIVITY)
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
 
     // Lighting
     const light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(1, 1, 1);
+    light.position.set(3, 3, 3);
     scene.add(light);
 
-    const ambient = new THREE.AmbientLight(0x404040);
-    scene.add(ambient);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.4));
 
     animate();
 }
 
-// ---------- ANIMATION LOOP ----------
+// ---------- LOOP ----------
 function animate() {
     requestAnimationFrame(animate);
 
     if (currentModel) {
-        currentModel.rotation.y += 0.01;
+        currentModel.rotation.y += 0.005;
     }
 
+    controls.update();
     renderer.render(scene, camera);
 }
 
-
-// ---------- SYSTEM 1: GENERATE ----------
+// ---------- GENERATE ----------
 async function generate() {
     const text = document.getElementById("inputText").value;
+    const status = document.getElementById("status");
 
     if (!text) {
-        alert("Please enter an object.");
+        alert("Enter something.");
         return;
     }
 
+    status.innerText = "⚡ Generating...";
+
     try {
-        const response = await fetch("http://127.0.0.1:5000/generate", {
+        const res = await fetch("http://127.0.0.1:5000/generate", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
+            headers: {"Content-Type": "application/json"},
             body: JSON.stringify({ text })
         });
 
-        const data = await response.json();
+        const data = await res.json();
 
         if (data.error) {
-            alert("Error: " + data.error);
+            status.innerText = "❌ Error";
             return;
         }
 
@@ -69,87 +74,80 @@ async function generate() {
 
         loadModel(data.model_url);
 
-    } catch (error) {
-        console.error(error);
-        alert("Failed to connect to backend.");
+        status.innerText = "✅ Model Loaded";
+
+    } catch (e) {
+        console.error(e);
+        status.innerText = "❌ Backend error";
     }
 }
 
-
-// ---------- LOAD 3D MODEL ----------
+// ---------- LOAD MODEL ----------
 function loadModel(url) {
     const loader = new THREE.GLTFLoader();
 
-    if (currentModel) {
-        scene.remove(currentModel);
-    }
+    if (currentModel) scene.remove(currentModel);
 
-    loader.load(
-        url,
-        function (gltf) {
-            currentModel = gltf.scene;
+    loader.load(url, (gltf) => {
+        currentModel = gltf.scene;
 
-            // Center model
-            currentModel.position.set(0, 0, 0);
-            currentModel.scale.set(1, 1, 1);
+        // 🔥 AUTO SCALE + CENTER (IMPORTANT FOR TEST)
+        const box = new THREE.Box3().setFromObject(currentModel);
+        const size = box.getSize(new THREE.Vector3()).length();
+        const center = box.getCenter(new THREE.Vector3());
 
-            scene.add(currentModel);
-        },
-        undefined,
-        function (error) {
-            console.error("Model load error:", error);
-            alert("Failed to load 3D model.");
-        }
-    );
+        currentModel.position.sub(center);
+        currentModel.scale.multiplyScalar(2 / size);
+
+        scene.add(currentModel);
+
+    }, undefined, (err) => {
+        console.error(err);
+        alert("Model failed to load");
+    });
 }
 
-
-// ---------- SYSTEM 2: AVATAR ----------
+// ---------- AVATAR ----------
 async function controlAvatar() {
     const text = document.getElementById("avatarCommand").value;
+    const status = document.getElementById("avatarStatus");
 
     if (!text) {
-        alert("Enter a command.");
+        alert("Enter command");
         return;
     }
 
+    status.innerText = "⚡ Thinking...";
+
     try {
-        const response = await fetch("http://127.0.0.1:5000/animate", {
+        const res = await fetch("http://127.0.0.1:5000/animate", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
+            headers: {"Content-Type": "application/json"},
             body: JSON.stringify({ text })
         });
 
-        const data = await response.json();
-
-        if (data.error) {
-            alert("Error: " + data.error);
-            return;
-        }
+        const data = await res.json();
 
         document.getElementById("avatarExplanation").innerText = data.explanation;
 
         playAnimation(data.action);
 
-    } catch (error) {
-        console.error(error);
-        alert("Failed to connect to backend.");
+        status.innerText = "✅ Done";
+
+    } catch (e) {
+        console.error(e);
+        status.innerText = "❌ Error";
     }
 }
 
-
-// ---------- AVATAR ANIMATION (SIMULATION) ----------
+// ---------- FAKE ANIMATION (for now) ----------
 function playAnimation(action) {
-    console.log("Avatar action:", action);
-
-    const message = {
-        walk: "🚶 Avatar is walking",
-        wave: "👋 Avatar is waving",
-        point: "👉 Avatar is pointing",
-        idle: "🧍 Avatar is idle"
+    const map = {
+        walk: "🚶 Walking",
+        wave: "👋 Waving",
+        point: "👉 Pointing",
+        idle: "🧍 Idle"
     };
 
-    alert(message[action] || "Unknown action");
+    alert(map[action] || "Unknown action");
 }
